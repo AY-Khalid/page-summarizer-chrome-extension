@@ -1,24 +1,16 @@
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.sync.get(["geminiApiKey"], (result) => {
-    if (!result.geminiApiKey) {
-      chrome.runtime.openOptionsPage();
-    }
-  });
-});
+const PROXY_URL = "https://proxy-api-delta-one.vercel.app/api/summarizer";
 
+// Clean up: We no longer need to open the options page on install
+chrome.runtime.onInstalled.addListener(() => {
+  console.log("Gemini Summarizer Installed and Proxy Ready.");
+});
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "FETCH_SUMMARY") {
-    // We use an async IIFE because onMessage listeners must return true for async responses
     (async () => {
       try {
-        const { geminiApiKey } = await chrome.storage.sync.get("geminiApiKey");
-        if (!geminiApiKey) {
-          sendResponse({ error: "API Key missing. Please check options." });
-          return;
-        }
-
-        const summary = await getGeminiSummary(request.text, request.selectionType, geminiApiKey);
+        // We call our Proxy instead of Google
+        const summary = await fetchFromProxy(request.text, request.selectionType);
         sendResponse({ summary });
       } catch (error) {
         sendResponse({ error: error.message });
@@ -28,7 +20,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-async function getGeminiSummary(text, type, apiKey) {
+async function fetchFromProxy(text, type) {
   const promptMapping = {
     "brief": `Briefly summarize this text. Provide only the summary: \n\n ${text}`,
     "detailed": `Provide a detailed summary of this text: \n\n ${text}`,
@@ -36,23 +28,22 @@ async function getGeminiSummary(text, type, apiKey) {
   };
 
   const prompt = promptMapping[type] || promptMapping["brief"];
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
 
-  const response = await fetch(url, {
+  const response = await fetch(PROXY_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }]
-    })
+    body: JSON.stringify({ prompt: prompt }) // Sending the prompt to your Vercel server
   });
 
-  const data = await response.json();
-
-  if (data.error) {
-    throw new Error(data.error.message);
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Proxy Error");
   }
 
-  let result = data.candidates[0].content.parts[0].text;
+  const data = await response.json();
+  
+  // Assuming your Vercel proxy returns the text directly or the Gemini JSON structure
+  let result = data.candidates ? data.candidates[0].content.parts[0].text : data.text;
   
   return result.replace(/\*\*/g, "").replace(/^\*\s/gm, "• ");
 }
