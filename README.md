@@ -1,3 +1,5 @@
+# Note: The installation process of the install has changed, users are no longer directed to a page to input their API keys
+
 # Gemini Web Summarizer
 
 A high-performance Chrome Extension built on Manifest V3 that utilizes the Gemini 2.5 Flash Lite model to provide intelligent webpage summaries. This project is engineered for zero-configuration usage, leveraging a secure proxy architecture to manage API communication and protect sensitive credentials.
