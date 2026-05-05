@@ -1,4 +1,4 @@
-# Note: The installation process of the install has changed, users are no longer directed to a page to input their API keys
+# Note: The installation process of the chrome extension has changed, users are no longer directed to a page to input their API keys
 
 # Gemini Web Summarizer
 
